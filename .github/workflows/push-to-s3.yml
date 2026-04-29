@@ -28,13 +28,6 @@ jobs:
           cp "$(ls assets/*.exe | head -n 1)" assets/target/installer.exe
           cp "$(ls assets/*.exe.sig | head -n 1)" assets/target/installer.exe.sig
 
-      - name: Setup MinIO
-        uses: mc-actions/configure@v1
-        with:
-          s3_server: ${{ secrets.S3_ENDPOINT }}
-          s3_access_key: "${{ secrets.S3_ACCESS_KEY }}"
-          s3_secret_key: "${{ secrets.S3_SECRET_KEY }}"
-
       - name: Upload files to S3 with metadata
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
