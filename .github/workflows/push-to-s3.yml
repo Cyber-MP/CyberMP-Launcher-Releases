@@ -35,8 +35,13 @@ jobs:
           s3_access_key: "${{ secrets.S3_ACCESS_KEY }}"
           s3_secret_key: "${{ secrets.S3_SECRET_KEY }}"
 
-      - name: Upload files to MinIO with metadata
-        shell: bash
+      - name: Upload files to S3 with metadata
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: us-east-1 # required by AWS CLI, any value works for RustFS
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
         run: |
           set -e
 
@@ -54,5 +59,7 @@ jobs:
 
             echo "Uploading $BASENAME (original=$ORIGINAL_NAME, version=$VERSION)"
 
-            mc cp --attr "originalname=$ORIGINAL_NAME;version=$VERSION" "$FILE" default/${S3_BUCKET}/"$BASENAME"
+            aws s3 cp "$FILE" "s3://${S3_BUCKET}/${BASENAME}" \
+              --endpoint-url "$S3_ENDPOINT" \
+              --metadata "originalname=${ORIGINAL_NAME},version=${VERSION}"
           done
