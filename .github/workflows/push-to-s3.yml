@@ -1,0 +1,58 @@
+name: Push release to S3
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        type: string
+        required: true
+        description: "Full release tag (e.g v0.1.0, 2026012305-stage)"
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download latest GitHub release assets
+        id: download_release
+        uses: robinraju/release-downloader@v1.10
+        with:
+          tag: ${{ github.event.inputs.release_tag }}
+          fileName: "*.exe*"
+          out-file-path: "assets"
+
+      - name: Rename installer files
+        run: |
+          set -e
+          mkdir -p assets/target
+          cp "$(ls assets/*.exe | head -n 1)" assets/target/installer.exe
+          cp "$(ls assets/*.exe.sig | head -n 1)" assets/target/installer.exe.sig
+
+      - name: Setup MinIO
+        uses: mc-actions/configure@v1
+        with:
+          s3_server: ${{ secrets.S3_ENDPOINT }}
+          s3_access_key: "${{ secrets.S3_ACCESS_KEY }}"
+          s3_secret_key: "${{ secrets.S3_SECRET_KEY }}"
+
+      - name: Upload files to MinIO with metadata
+        shell: bash
+        run: |
+          set -e
+
+          TAG="${{ steps.download_release.outputs.tag_name }}"
+          VERSION="${TAG#v}"
+
+          for FILE in assets/target/*; do
+            BASENAME=$(basename "$FILE")
+
+            if [[ "$BASENAME" == "installer.exe" ]]; then
+              ORIGINAL_NAME=$(basename $(ls assets/*.exe | head -n 1))
+            else
+              ORIGINAL_NAME=$(basename $(ls assets/*.exe.sig | head -n 1))
+            fi
+
+            echo "Uploading $BASENAME (original=$ORIGINAL_NAME, version=$VERSION)"
+
+            mc cp --attr "originalname=$ORIGINAL_NAME;version=$VERSION" "$FILE" default/${S3_BUCKET}/"$BASENAME"
+          done
