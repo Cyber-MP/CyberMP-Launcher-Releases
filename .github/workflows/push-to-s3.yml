@@ -18,15 +18,14 @@ jobs:
         uses: robinraju/release-downloader@v1.10
         with:
           tag: ${{ github.event.inputs.release_tag }}
-          fileName: "*.exe*"
+          fileName: "*.msi*"
           out-file-path: "assets"
 
       - name: Rename installer files
         run: |
           set -e
           mkdir -p assets/target
-          cp "$(ls assets/*.exe | head -n 1)" assets/target/installer.exe
-          cp "$(ls assets/*.exe.sig | head -n 1)" assets/target/installer.exe.sig
+          cp "$(ls assets/*.msi | head -n 1)" assets/target/installer.msi
 
       - name: Upload files to S3 with metadata
         env:
@@ -44,10 +43,8 @@ jobs:
           for FILE in assets/target/*; do
             BASENAME=$(basename "$FILE")
 
-            if [[ "$BASENAME" == "installer.exe" ]]; then
-              ORIGINAL_NAME=$(basename $(ls assets/*.exe | head -n 1))
-            else
-              ORIGINAL_NAME=$(basename $(ls assets/*.exe.sig | head -n 1))
+            if [[ "$BASENAME" == "installer.msi" ]]; then
+              ORIGINAL_NAME=$(basename $(ls assets/*.msi | head -n 1))
             fi
 
             echo "Uploading $BASENAME (original=$ORIGINAL_NAME, version=$VERSION)"
